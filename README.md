@@ -11,7 +11,7 @@ Download the latest binaries from the [releases page](https://github.com/S0raWas
 1. Launch Minecraft `rd-132211`
 2. Run the injector:
    ```sh
-   1njector.exe javaw.exe fly_rd_132211.dll
+   1nject.exe javaw.exe fly_rd_132211.dll
    ```
 
 ### Controls
@@ -34,7 +34,7 @@ cargo build --release
 ```
 
 Outputs:
-- `target/release/1njector.exe` - DLL injector
+- `target/release/1nject.exe` - DLL injector
 - `target/release/fly_rd_132211.dll` - Fly hack DLL
 
 ## How It Works
@@ -43,10 +43,10 @@ The injector is a universal DLL injector that uses the classic `LoadLibraryA` te
 
 ```sh
 # By process name
-1njector.exe javaw.exe path\to\your.dll
+1nject.exe javaw.exe path\to\your.dll
 
 # By PID
-1njector.exe 1234 path\to\your.dll
+1nject.exe 1234 path\to\your.dll
 ```
 
 ## License
