@@ -108,7 +108,7 @@ fn shadow_text(ui: &dear_imgui_rs::Ui, text: &str) {
     let pos = ui.cursor_screen_pos();
 
     // Shadow
-    draw.add_text([pos[0] + 2.0, pos[1] + 1.0], [0.0, 0.0, 0.0, 0.8], text);
+    draw.add_text([pos[0] + 1.0, pos[1] + 2.0], [0.0, 0.0, 0.0, 0.8], text);
 
     // Foreground
     draw.add_text(pos, [1.0, 1.0, 1.0, 1.0], text);
