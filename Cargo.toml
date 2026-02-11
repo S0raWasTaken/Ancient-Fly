@@ -8,7 +8,7 @@ crate-type = ["cdylib"]
 
 [[bin]]
 name = "1nject"
-path = "src/main.rs"
+path = "src/dll_injector.rs"
 
 [dependencies]
 argh = "0.1.14"
