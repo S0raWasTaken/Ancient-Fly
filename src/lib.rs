@@ -41,7 +41,7 @@ fn find_y_coord_addresses() -> [usize; 4] {
 fn print_teto() {
     println!(
         "I used the teto to destroy the teto!\n{}",
-        include_str!("../teto.txt")
+        include_str!("../resources/teto.txt")
     );
 }
 

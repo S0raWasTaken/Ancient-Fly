@@ -1,9 +1,9 @@
 # Ancient Fly
 
 A fly hack for Minecraft pre-classic **rd-132211** (released May 13, 2009).
-![](rd132211.png)
-![](teto_logs.png)
-![](rd132211-ui_zoom.png)
+![](resources/rd132211.png)
+![](resources/teto_logs.png)
+![](resources/rd132211-ui_zoom.png)
 
 ## Quick Start
 
