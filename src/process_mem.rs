@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::mem;
 use windows::Win32::System::Memory::{MEM_COMMIT, PAGE_GUARD, PAGE_NOACCESS};
 use windows::Win32::System::Memory::{MEMORY_BASIC_INFORMATION, VirtualQuery};
@@ -33,17 +34,19 @@ impl std::fmt::Display for ScanError {
 
 impl std::error::Error for ScanError {}
 
-pub fn scan_for_f32(
+pub type Float = f32;
+
+pub fn scan_memory<T: Copy + PartialOrd + Display>(
     start: usize,
     end: usize,
-    min: f32,
-    max: f32,
+    min: T,
+    max: T,
 ) -> Result<Vec<usize>, ScanError> {
     if start >= end {
         return Err(ScanError::InvalidRange);
     }
 
-    let mut results = Vec::with_capacity(4);
+    let mut results = Vec::new();
     let mut addr = start;
     let mut found_any_readable = false;
 
@@ -68,7 +71,6 @@ pub fn scan_for_f32(
         let region_start = mbi.BaseAddress as usize;
         let region_end = region_start + mbi.RegionSize;
 
-        // Check if this region is readable
         let is_readable = mbi.State == MEM_COMMIT
             && (mbi.Protect & PAGE_GUARD).0 == 0
             && (mbi.Protect & PAGE_NOACCESS).0 == 0
@@ -77,22 +79,20 @@ pub fn scan_for_f32(
         if is_readable {
             found_any_readable = true;
 
-            // Scan this region
             let scan_start = addr.max(region_start);
             let scan_end = end.min(region_end);
 
             let mut scan_addr = scan_start;
-            while scan_addr + mem::size_of::<f32>() <= scan_end {
-                let ptr = scan_addr as *const f32;
+            while scan_addr + mem::size_of::<T>() <= scan_end {
+                let ptr = scan_addr as *const T;
                 let value = unsafe { std::ptr::read_unaligned(ptr) };
                 if value >= min && value <= max {
                     results.push(scan_addr);
                 }
-                scan_addr += mem::size_of::<f32>();
+                scan_addr += 1;
             }
         }
 
-        // Move to next region
         addr = region_end;
     }
 
@@ -118,11 +118,11 @@ fn is_page_readable(
 }
 
 /// Read address into a float
-pub fn f_read(addr: usize) -> f32 {
-    unsafe { *(addr as *const f32) }
+pub fn f_read(addr: usize) -> Float {
+    unsafe { *(addr as *const Float) }
 }
 
 /// Write float into address
-pub fn f_write(addr: usize, value: f32) {
-    unsafe { *(addr as *mut f32) = value }
+pub fn f_write(addr: usize, value: Float) {
+    unsafe { *(addr as *mut Float) = value }
 }

@@ -1,15 +1,85 @@
 use std::{fmt::Display, thread::sleep, time::Duration};
 
-use crate::fly_hack::{
-    addresses::Addresses,
-    keybinds::{KeyState, KeyStates},
+use crate::{
+    fly_hack::{
+        addresses::Addresses,
+        keybinds::{KeyState, KeyStates},
+    },
+    process_mem::Float,
 };
 
-enum State {
+#[derive(Default, Clone, Copy)]
+enum SpaceStateMachine {
+    #[default]
+    Entry,
+    Pressed,
+    PressedAndReleased,
+    DoublePressed,
+}
+
+impl SpaceStateMachine {
+    pub fn update_state(&mut self, keybind: KeyState) {
+        *self = match (&self, keybind) {
+            (
+                SpaceStateMachine::Entry,
+                KeyState::Pressed | KeyState::Holding,
+            ) => Self::Pressed,
+            (SpaceStateMachine::Pressed, KeyState::Released) => {
+                Self::PressedAndReleased
+            }
+            (
+                SpaceStateMachine::PressedAndReleased,
+                KeyState::Pressed | KeyState::Holding,
+            ) => Self::DoublePressed,
+            (SpaceStateMachine::DoublePressed, _) => Self::Entry,
+            _ => *self,
+        };
+    }
+}
+
+pub static mut STATE: State = State::Off;
+
+#[derive(Clone, Copy)]
+pub enum State {
     Off,
     Idle,
     Ascending,
     Descending,
+}
+
+impl State {
+    pub fn off(&mut self) {
+        *self = Self::Off;
+        self.update_static();
+    }
+
+    pub fn idle(&mut self) {
+        *self = Self::Idle;
+        self.update_static();
+    }
+
+    pub fn ascending(&mut self) {
+        *self = Self::Ascending;
+        self.update_static();
+    }
+
+    pub fn descending(&mut self) {
+        *self = Self::Descending;
+        self.update_static();
+    }
+
+    pub fn toggle(&mut self) {
+        if matches!(self, State::Off) {
+            self.idle();
+        } else {
+            self.off();
+        }
+        self.update_static();
+    }
+
+    fn update_static(self) {
+        unsafe { STATE = self };
+    }
 }
 
 impl Display for State {
@@ -27,9 +97,11 @@ impl Display for State {
 pub struct FlyHack {
     addresses: Addresses,
     state: State,
-    speed: f32,
+    speed: Float,
     iteration_number: usize,
     key_states: KeyStates,
+    space_state_machine: SpaceStateMachine,
+    cooldown: usize,
 }
 
 impl FlyHack {
@@ -40,22 +112,19 @@ impl FlyHack {
             speed: 0.1,
             iteration_number: 0,
             key_states: KeyStates::default(),
+            space_state_machine: SpaceStateMachine::default(),
+            cooldown: 0,
         }
     }
 
     pub fn main_loop(&mut self) {
         self.addresses.populate_save();
+        let mut space_start = self.iteration_number;
         loop {
             let mul_10_frame = self.iteration_number.is_multiple_of(10);
             self.key_states.update();
 
-            if matches!(self.key_states.f1, KeyState::Pressed) {
-                if let State::Off = self.state {
-                    self.state = State::Idle;
-                } else {
-                    self.state = State::Off;
-                }
-            }
+            self.double_tap_space_bar_detector(&mut space_start);
 
             match self.state {
                 State::Idle => {
@@ -72,10 +141,6 @@ impl FlyHack {
                 _ => (),
             }
 
-            if self.iteration_number.is_multiple_of(2000) {
-                println!("State: {}", self.state);
-            }
-
             self.iteration_number += 1;
 
             if self.iteration_number >= 10000 {
@@ -86,17 +151,42 @@ impl FlyHack {
         }
     }
 
+    fn double_tap_space_bar_detector(&mut self, space_start: &mut usize) {
+        self.cooldown = self.cooldown.saturating_sub(1);
+        if self.cooldown != 0 {
+            return;
+        }
+
+        if matches!(self.space_state_machine, SpaceStateMachine::Entry) {
+            *space_start = self.iteration_number;
+        }
+
+        if !matches!(self.space_state_machine, SpaceStateMachine::Entry)
+            && self.iteration_number - *space_start > 200
+        {
+            self.space_state_machine = SpaceStateMachine::Entry;
+        }
+
+        self.space_state_machine.update_state(self.key_states.space);
+
+        if matches!(self.space_state_machine, SpaceStateMachine::DoublePressed)
+        {
+            self.state.toggle();
+            self.cooldown = 200;
+        }
+    }
+
     fn ascending(&mut self) {
         self.addresses.sum(self.speed);
         if matches!(self.key_states.space, KeyState::Released) {
-            self.state = State::Idle;
+            self.state.idle();
         }
     }
 
     fn descending(&mut self) {
         self.addresses.sum(-self.speed);
         if matches!(self.key_states.shift, KeyState::Released) {
-            self.state = State::Idle;
+            self.state.idle();
         }
     }
 
@@ -106,14 +196,14 @@ impl FlyHack {
             self.key_states.shift,
             KeyState::Pressed | KeyState::Holding
         ) {
-            self.state = State::Descending;
+            self.state.descending();
         }
 
         if matches!(
             self.key_states.space,
             KeyState::Pressed | KeyState::Holding
         ) {
-            self.state = State::Ascending;
+            self.state.ascending();
         }
     }
 }
