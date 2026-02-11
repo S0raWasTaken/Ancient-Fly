@@ -1,6 +1,9 @@
 # Ancient Fly
 
 A fly hack for Minecraft pre-classic **rd-132211** (released May 13, 2009).
+![](rd132211.png)
+![](teto_logs.png)
+![](rd132211-ui_zoom.png)
 
 ## Quick Start
 
@@ -18,8 +21,8 @@ Download the latest binaries from the [releases page](https://github.com/S0raWas
 
 | Key | Action |
 |-----|--------|
-| F1 | Toggle fly mode |
-| Space | Ascend |
+| Double tap Space | Toggle fly mode |
+| Space (Hold) | Ascend |
 | Shift | Descend |
 
 ## Building from Source
@@ -37,7 +40,7 @@ Outputs:
 - `target/release/1nject.exe` - DLL injector
 - `target/release/fly_rd_132211.dll` - Fly hack DLL
 
-## How It Works
+## About the injector
 
 The injector is a universal DLL injector that uses the classic `LoadLibraryA` technique. It can target processes by name or PID:
 
@@ -48,6 +51,8 @@ The injector is a universal DLL injector that uses the classic `LoadLibraryA` te
 # By PID
 1nject.exe 1234 path\to\your.dll
 ```
+
+You may as well use any other DLL injector if you wish.
 
 ## License
 
