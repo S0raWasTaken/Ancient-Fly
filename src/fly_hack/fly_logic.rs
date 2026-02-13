@@ -1,11 +1,8 @@
 use std::{fmt::Display, thread::sleep, time::Duration};
 
-use crate::{
-    fly_hack::{
-        addresses::Addresses,
-        keybinds::{KeyState, KeyStates},
-    },
-    process_mem::Float,
+use crate::fly_hack::{
+    addresses::Addresses,
+    keybinds::{KeyState, KeyStates},
 };
 
 #[derive(Default, Clone, Copy)]
@@ -97,7 +94,7 @@ impl Display for State {
 pub struct FlyHack {
     addresses: Addresses,
     state: State,
-    speed: Float,
+    speed: f32,
     iteration_number: usize,
     key_states: KeyStates,
     space_state_machine: SpaceStateMachine,

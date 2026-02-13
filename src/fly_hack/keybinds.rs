@@ -1,5 +1,8 @@
-use windows::Win32::UI::Input::KeyboardAndMouse::{
-    GetAsyncKeyState, VK_LSHIFT, VK_SPACE,
+use std::process;
+
+use windows::Win32::UI::{
+    Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LSHIFT, VK_SPACE},
+    WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId},
 };
 
 macro_rules! key_state {
@@ -44,6 +47,12 @@ pub struct KeyStates {
 
 impl KeyStates {
     pub fn update(&mut self) {
+        if !is_window_focused() {
+            self.shift = KeyState::Released;
+            self.space = KeyState::Released;
+            return;
+        }
+
         let shift = key_state!(VK_LSHIFT);
         let space = key_state!(VK_SPACE);
 
@@ -51,5 +60,21 @@ impl KeyStates {
             self.shift => shift,
             self.space => space
         );
+    }
+}
+
+fn is_window_focused() -> bool {
+    unsafe {
+        let foreground_window = GetForegroundWindow();
+        if foreground_window.0.is_null() {
+            return false;
+        }
+
+        let mut window_pid: u32 = 0;
+        GetWindowThreadProcessId(foreground_window, Some(&raw mut window_pid));
+
+        let current_pid = process::id();
+
+        window_pid == current_pid
     }
 }
