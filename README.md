@@ -11,7 +11,7 @@ Download the latest binaries from the [releases page](https://github.com/S0raWas
 
 ### Usage
 
-1. Launch Minecraft `rd-132211`
+1. Launch Minecraft `rd-132211`, `rd-132328` or `rd-160052` and wait until you reach the ground (stay on grass level, or else the scan will fail).
 2. Run the injector:
    ```sh
    1nject.exe javaw.exe fly_rd_132211.dll
