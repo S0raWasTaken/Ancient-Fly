@@ -5,7 +5,9 @@ use std::{
     time::Duration,
 };
 
-use crate::process_mem::{check_address, is_memory_range_readable};
+use crate::process_mem::{
+    check_address, is_address_readable, is_memory_range_readable,
+};
 
 /// To find the second and fourth address,
 /// we sum the last address + 0xC, always.
@@ -13,7 +15,7 @@ use crate::process_mem::{check_address, is_memory_range_readable};
 /// one of these numbers, depending on
 /// the version of Minecraft.
 #[repr(usize)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Version {
     RD132211 = 0xF8,
     RD132328 = 0x1070,
@@ -22,6 +24,15 @@ pub enum Version {
 
 #[allow(clippy::enum_glob_use)]
 use Version::*;
+
+impl Version {
+    pub fn expected_y_level_range(self) -> (f32, f32) {
+        match self {
+            RD132211 | RD132328 => (44.61, 44.63),
+            RD160052 => (40.0, 54.0),
+        }
+    }
+}
 
 impl Add<Version> for usize {
     type Output = usize;
@@ -48,6 +59,14 @@ where
     Err(last.unwrap())
 }
 
+/// Wrapper for `check_address`
+/// made with `Version::*::expected_y_level_range()` in mind
+#[inline]
+unsafe fn check_version(addr: usize, version: Version) -> bool {
+    let (range_start, range_end) = version.expected_y_level_range();
+    unsafe { check_address(addr, range_start, range_end) }
+}
+
 const NOTFOUND: &str = "Version and base address not found.\n\
 Are you running a supported minecraft version?";
 
@@ -62,7 +81,7 @@ fn try_rd13x(
     }
 
     for addr in range {
-        if unsafe { check_address(addr, 44.61, 44.63) } {
+        if unsafe { check_version(addr, version) } {
             return Ok((addr, version));
         }
     }
@@ -70,12 +89,14 @@ fn try_rd13x(
 }
 
 fn try_rd160052() -> Result<(usize, Version), String> {
-    if !is_memory_range_readable(0x701500000..0x702040000) {
+    let base_addresses = [0x70203C5E0, 0x7018328E0, 0x7015A0A10, 0x701832960];
+
+    if base_addresses.into_iter().any(|addr| !is_address_readable(addr)) {
         return Err(UNREADABLE_MEMORY.to_string());
     }
 
-    for addr in [0x70203C5E0, 0x7018328E0, 0x7015A0A10, 0x701832960] {
-        if unsafe { check_address(addr, 40.0, 54.0) } {
+    for addr in base_addresses {
+        if unsafe { check_version(addr, Version::RD160052) } {
             return Ok((addr, RD160052));
         }
     }

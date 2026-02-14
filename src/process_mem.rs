@@ -16,6 +16,33 @@ pub unsafe fn check_address(addr: usize, min: f32, max: f32) -> bool {
     value >= min && value <= max
 }
 
+pub fn is_address_readable(addr: usize) -> bool {
+    let readable_flags = PAGE_READONLY
+        | PAGE_READWRITE
+        | PAGE_WRITECOPY
+        | PAGE_EXECUTE_READ
+        | PAGE_EXECUTE_READWRITE
+        | PAGE_EXECUTE_WRITECOPY;
+
+    let mut mbi = MEMORY_BASIC_INFORMATION::default();
+
+    unsafe {
+        let result = VirtualQuery(
+            Some(addr as *const std::ffi::c_void),
+            &raw mut mbi,
+            std::mem::size_of::<MEMORY_BASIC_INFORMATION>(),
+        );
+
+        if result == 0 {
+            return false;
+        }
+    }
+
+    mbi.State == MEM_COMMIT
+        && (mbi.Protect.0 & readable_flags.0) != 0
+        && (mbi.Protect.0 & PAGE_GUARD.0) == 0
+}
+
 pub fn is_memory_range_readable(range: Range<usize>) -> bool {
     if range.is_empty() {
         return false;
