@@ -76,7 +76,7 @@ fn try_rd13x(
     range: Range<usize>,
     version: Version,
 ) -> Result<(usize, Version), String> {
-    if !is_memory_range_readable(range.clone()) {
+    if !is_memory_range_readable::<f32>(range.clone()) {
         return Err(UNREADABLE_MEMORY.to_string());
     }
 
@@ -92,7 +92,7 @@ fn try_rd160052() -> Result<(usize, Version), String> {
     let base_addresses = [0x70203C5E0, 0x7018328E0, 0x7015A0A10, 0x701832960];
 
     for addr in base_addresses {
-        if is_address_readable(addr)
+        if is_address_readable::<f32>(addr)
             && unsafe { check_version(addr, Version::RD160052) }
         {
             return Ok((addr, RD160052));

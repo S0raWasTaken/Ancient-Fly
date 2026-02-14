@@ -7,6 +7,13 @@ use windows::Win32::System::Memory::{
     PAGE_READWRITE, PAGE_WRITECOPY, VirtualQuery,
 };
 
+const READABLE_FLAGS: u32 = PAGE_READONLY.0
+    | PAGE_READWRITE.0
+    | PAGE_WRITECOPY.0
+    | PAGE_EXECUTE_READ.0
+    | PAGE_EXECUTE_READWRITE.0
+    | PAGE_EXECUTE_WRITECOPY.0;
+
 /// # Safety
 /// The caller must ensure:
 /// - `addr` points to valid, readable memory for at least 4 bytes.
@@ -16,48 +23,28 @@ pub unsafe fn check_address(addr: usize, min: f32, max: f32) -> bool {
     value >= min && value <= max
 }
 
-pub fn is_address_readable(addr: usize) -> bool {
-    let readable_flags = PAGE_READONLY
-        | PAGE_READWRITE
-        | PAGE_WRITECOPY
-        | PAGE_EXECUTE_READ
-        | PAGE_EXECUTE_READWRITE
-        | PAGE_EXECUTE_WRITECOPY;
+#[inline]
+pub fn is_address_readable<T>(addr: usize) -> bool {
+    is_memory_range_readable::<T>(addr..addr + 1)
+    // I'm not gonna overthink this + 1, I could do a checked_add, but... come on,
+    // we're talking about the 64bit integer limit as a MEMORY POINTER.
+    // what the hell are we doing to even think about checking bounds
+    // on 16.777.216 TERABYTES of RAM? (about 700 billion dollars circa 2026,
+    // assuming that every stick needed for that enourmous amount of ram is already
+    // available).
 
-    let mut mbi = MEMORY_BASIC_INFORMATION::default();
-
-    unsafe {
-        let result = VirtualQuery(
-            Some(addr as *const std::ffi::c_void),
-            &raw mut mbi,
-            std::mem::size_of::<MEMORY_BASIC_INFORMATION>(),
-        );
-
-        if result == 0 {
-            return false;
-        }
-    }
-
-    mbi.State == MEM_COMMIT
-        && (mbi.Protect.0 & readable_flags.0) != 0
-        && (mbi.Protect.0 & PAGE_GUARD.0) == 0
+    // Are we ever going to HAVE to scan for usize::MAX - 1? I don't think so!
 }
 
-pub fn is_memory_range_readable(range: Range<usize>) -> bool {
-    if range.is_empty() {
+pub fn is_memory_range_readable<T>(range: Range<usize>) -> bool {
+    let size = size_of::<T>();
+    if range.is_empty() || size == 0 {
         return false;
     }
 
     let start_addr = range.start;
-    let end_addr = range.end;
+    let Some(end_addr) = range.end.checked_add(size) else { return false };
     let mut current_addr = start_addr;
-
-    let readable_flags = PAGE_READONLY
-        | PAGE_READWRITE
-        | PAGE_WRITECOPY
-        | PAGE_EXECUTE_READ
-        | PAGE_EXECUTE_READWRITE
-        | PAGE_EXECUTE_WRITECOPY;
 
     while current_addr < end_addr {
         let mut mbi = MEMORY_BASIC_INFORMATION::default();
@@ -76,7 +63,7 @@ pub fn is_memory_range_readable(range: Range<usize>) -> bool {
 
         // Check if this region is committed and readable
         if mbi.State != MEM_COMMIT
-            || (mbi.Protect.0 & readable_flags.0) == 0
+            || (mbi.Protect.0 & READABLE_FLAGS) == 0
             || (mbi.Protect.0 & PAGE_GUARD.0) != 0
         {
             return false;
