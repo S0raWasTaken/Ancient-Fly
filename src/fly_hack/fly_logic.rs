@@ -102,6 +102,8 @@ pub struct FlyHack {
 }
 
 impl FlyHack {
+    const ITERATION_MAX: usize = 10000;
+
     pub fn new(addresses: [usize; 4]) -> Self {
         Self {
             addresses: Addresses::new(addresses),
@@ -140,7 +142,7 @@ impl FlyHack {
 
             self.iteration_number += 1;
 
-            if self.iteration_number >= 10000 {
+            if self.iteration_number >= Self::ITERATION_MAX {
                 self.iteration_number = 0;
             }
 
@@ -158,8 +160,14 @@ impl FlyHack {
             *space_start = self.iteration_number;
         }
 
+        let elapsed = if self.iteration_number >= *space_start {
+            self.iteration_number - *space_start
+        } else {
+            (Self::ITERATION_MAX - *space_start) + self.iteration_number
+        };
+
         if !matches!(self.space_state_machine, SpaceStateMachine::Entry)
-            && self.iteration_number - *space_start > 200
+            && elapsed > 200
         {
             self.space_state_machine = SpaceStateMachine::Entry;
         }

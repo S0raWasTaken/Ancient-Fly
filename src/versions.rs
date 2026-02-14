@@ -70,7 +70,7 @@ fn try_rd13x(
 }
 
 fn try_rd160052() -> Result<(usize, Version), String> {
-    if !is_memory_range_readable(0x701500000..0x701850000) {
+    if !is_memory_range_readable(0x701500000..0x702040000) {
         return Err(UNREADABLE_MEMORY.to_string());
     }
 
