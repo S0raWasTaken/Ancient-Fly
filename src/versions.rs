@@ -91,12 +91,10 @@ fn try_rd13x(
 fn try_rd160052() -> Result<(usize, Version), String> {
     let base_addresses = [0x70203C5E0, 0x7018328E0, 0x7015A0A10, 0x701832960];
 
-    if base_addresses.into_iter().any(|addr| !is_address_readable(addr)) {
-        return Err(UNREADABLE_MEMORY.to_string());
-    }
-
     for addr in base_addresses {
-        if unsafe { check_version(addr, Version::RD160052) } {
+        if is_address_readable(addr)
+            && unsafe { check_version(addr, Version::RD160052) }
+        {
             return Ok((addr, RD160052));
         }
     }
