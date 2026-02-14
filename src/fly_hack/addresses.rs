@@ -1,8 +1,8 @@
-use crate::process_mem::{Float, f_read, f_write};
+use crate::process_mem::{f_read, f_write};
 
 pub struct Addresses {
     addresses: [usize; 4],
-    saved_values: [Float; 4],
+    saved_values: [f32; 4],
 }
 
 impl Addresses {
@@ -11,14 +11,14 @@ impl Addresses {
     }
 
     pub fn populate_save(&mut self) {
-        let first_value = f_read(self.addresses[0]);
+        let first_value = unsafe { f_read(self.addresses[0]) };
         self.saved_values[0] = first_value;
         self.saved_values[1] = first_value;
-        self.saved_values[2] = f_read(self.addresses[2]);
-        self.saved_values[3] = f_read(self.addresses[3]);
+        self.saved_values[2] = unsafe { f_read(self.addresses[2]) };
+        self.saved_values[3] = unsafe { f_read(self.addresses[3]) };
     }
 
-    pub fn sum(&mut self, value: Float) {
+    pub fn sum(&mut self, value: f32) {
         self.saved_values[0] += value;
         self.saved_values[1] = self.saved_values[0];
         self.saved_values[2] += value;
@@ -28,10 +28,9 @@ impl Addresses {
     }
 
     pub fn keep(&mut self) {
-        for (save, addr) in
-            self.saved_values.iter_mut().zip(self.addresses.iter())
+        for (save, addr) in self.saved_values.iter().zip(self.addresses.iter())
         {
-            f_write(*addr, *save);
+            unsafe { f_write(*addr, *save) };
         }
     }
 }

@@ -1,8 +1,6 @@
 #![warn(clippy::pedantic)]
 #![allow(non_snake_case, clippy::unreadable_literal, clippy::cast_sign_loss)]
 
-use std::thread::spawn;
-
 use windows::Win32::{
     Foundation::HMODULE,
     System::{
@@ -13,29 +11,36 @@ use windows::Win32::{
 
 use crate::{
     fly_hack::{fly_logic::FlyHack, gui::install_hook},
-    process_mem::{f_read, scan_memory},
+    process_mem::f_read,
+    versions::find_version_and_base_addr,
 };
 
 mod fly_hack;
 mod process_mem;
+mod versions;
+
+macro_rules! dbg_read {
+    ($addr:expr) => {{
+        println!("@hit! <{:X}> {}", $addr, unsafe { f_read($addr) });
+        $addr
+    }};
+}
+
+const INNER_DIFF: usize = 0xC;
 
 fn find_y_coord_addresses() -> [usize; 4] {
-    let addr_list =
-        scan_memory::<f32>(0xECBD1000, 0xECBD2000, 43.0, 45.0).unwrap();
+    let (first_addr, version) = find_version_and_base_addr().unwrap();
 
-    for addr in &addr_list {
-        println!("@hit!  <{addr:X}> {}", f_read(*addr));
-    }
+    let second_addr = first_addr + INNER_DIFF;
+    let third_addr = second_addr + version;
+    let fourth_addr = third_addr + INNER_DIFF;
 
-    assert!(
-        addr_list.len() == 4,
-        "No, it doesn't work in rd-132328 or any other version.\n\
-        But I like to think that a miracle happened and somehow we\
-        accidentally scanned an extra match by pure chance.\n\
-        Or you tried to turn this thing on outside the grass' Y level."
-    );
-
-    addr_list.try_into().unwrap()
+    [
+        dbg_read!(first_addr),
+        dbg_read!(second_addr),
+        dbg_read!(third_addr),
+        dbg_read!(fourth_addr),
+    ]
 }
 
 fn print_teto() {
@@ -67,7 +72,11 @@ pub unsafe extern "system" fn DllMain(
         if unsafe { DisableThreadLibraryCalls(module) }.is_err() {
             return false;
         }
-        spawn(main_thread);
+        let thread = std::thread::Builder::new().name("Main".to_string());
+        if let Err(e) = thread.spawn(main_thread) {
+            eprintln!("Failed to spawn main thread: {e}");
+            return false;
+        }
     }
     true
 }
